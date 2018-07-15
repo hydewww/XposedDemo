@@ -3,18 +3,35 @@ package cn.hydewww.xposeddemo
 import android.app.AndroidAppHelper
 import android.content.Context
 import android.net.Uri
-import android.os.CancellationSignal
+import android.os.Looper
 import android.widget.Toast
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge.hookAllMethods
 import de.robv.android.xposed.XposedBridge.log
-import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 class Xposed : IXposedHookLoadPackage {
 
     private val switch_URI = Uri.parse("content://cn.hydewww.xposeddemo.provider/switch")
+
+    // 产生调用时记录
+    fun myLog(context: Context, msg: String) {
+        log(msg)
+        try {
+            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+        // 当context为线程时(Toast On Thread)
+        } catch(e: Exception) {
+            object: Thread(){
+                override fun run() {
+                    super.run()
+                    Looper.prepare()
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                    Looper.loop()
+                }
+            }.start()
+        }
+    }
 
     // 获取当前Switch状态
     fun getState(context: Context): Boolean {
@@ -35,8 +52,7 @@ class Xposed : IXposedHookLoadPackage {
                 val context = AndroidAppHelper.currentApplication() // 获取当前应用上下文
                 if (!getState(context))
                     return
-                log("${lpparam.packageName} 调用 $className.$methodName")
-                Toast.makeText(context, "${lpparam.packageName} 调用 $className.$methodName", Toast.LENGTH_SHORT).show()
+                myLog(context, "${lpparam.packageName} 调用 $className.$methodName")
             }
         })
     }
@@ -74,8 +90,7 @@ class Xposed : IXposedHookLoadPackage {
                     val context =  AndroidAppHelper.currentApplication()    // 获取当前应用上下文
                     if (!getState(context))
                         return
-                    log("${lpparam.packageName} 调用 $moduleName")
-                    Toast.makeText(context, "${lpparam.packageName} 调用 $moduleName", Toast.LENGTH_SHORT).show()
+                    myLog(context, "${lpparam.packageName} 调用 $moduleName")
                 }
             }
         )
